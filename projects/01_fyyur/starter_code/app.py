@@ -5,7 +5,7 @@
 import json
 import dateutil.parser
 import babel
-from flask import Flask, render_template, request, Response, flash, redirect, url_for
+from flask import Flask, render_template, request, Response, flash, redirect, url_for, jsonify
 from flask_moment import Moment
 from flask_sqlalchemy import SQLAlchemy
 import logging
@@ -19,8 +19,9 @@ from forms import *
 app = Flask(__name__)
 moment = Moment(app)
 app.config.from_object('config')
+app.config['SQLALCHEMY_DATABASE_URI'] = 'postgresql://gen_user:gen_user@localhost:5432/fyyur'
+app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 db = SQLAlchemy(app)
-
 # TODO: connect to a local postgresql database
 
 #----------------------------------------------------------------------------#
@@ -38,8 +39,12 @@ class Venue(db.Model):
     phone = db.Column(db.String(120))
     image_link = db.Column(db.String(500))
     facebook_link = db.Column(db.String(120))
-
+# 'genres', 'website_link', 'seeking_description'
+    
     # TODO: implement any missing fields, as a database migration using Flask-Migrate
+    def __repr__(self):
+        return f"Venue name:{self.name} city: {self.city} state:{self.state}"
+db.create_all()
 
 class Artist(db.Model):
     __tablename__ = 'Artist'
@@ -55,6 +60,7 @@ class Artist(db.Model):
 
     # TODO: implement any missing fields, as a database migration using Flask-Migrate
 
+db.create_all()
 # TODO Implement Show and Artist models, and complete all model relationships and properties, as a database migration.
 
 #----------------------------------------------------------------------------#
@@ -108,7 +114,21 @@ def venues():
       "num_upcoming_shows": 0,
     }]
   }]
-  return render_template('pages/venues.html', areas=data);
+  data = Venue.query.all()
+  unique_city_state = set({(v.city,v.state) for v in data})
+  print(unique_city_state)
+  all_data = {(c,s):[] for (c,s) in unique_city_state if not c==None and not s==None}
+  for v in data:
+      if v.state==None or v.city==None: continue
+      all_data[(v.city,v.state)].append([v.id,v.name,0])
+  json_data = []
+  for (c,s),llist in all_data.items():
+      dd = {"city":c,"state":s,"venues":[]}
+      for ll in llist:
+          dd_l = {"id":ll[0],"name":ll[1],"num_upcoming_shows":ll[2]}
+          dd["venues"].append(dd_l)
+      json_data.append(dd)
+  return render_template('pages/venues.html', areas=json_data);
 
 @app.route('/venues/search', methods=['POST'])
 def search_venues():
@@ -206,8 +226,12 @@ def show_venue(venue_id):
     "past_shows_count": 1,
     "upcoming_shows_count": 1,
   }
-  data = list(filter(lambda d: d['id'] == venue_id, [data1, data2, data3]))[0]
-  return render_template('pages/show_venue.html', venue=data)
+  # data = list(filter(lambda d: d['id'] == venue_id, [data1, data2, data3]))[0]
+  this_venue = Venue.query.get(venue_id)
+  data_d = {"id":this_venue.id, "name":this_venue.name, 
+            "address": this_venue.address, "city":this_venue.city, "state":this_venue.state,
+            "facebook_link": this_venue.facebook_link, "image_link": this_venue.image_link}
+  return render_template('pages/show_venue.html', venue=data_d)
 
 #  Create Venue
 #  ----------------------------------------------------------------
@@ -223,7 +247,30 @@ def create_venue_submission():
   # TODO: modify data to be the data object returned from db insertion
 
   # on successful db insert, flash success
-  flash('Venue ' + request.form['name'] + ' was successfully listed!')
+  print(request.form.keys())
+  # 'name', 'city', 'state', 'address', 'phone', 'genres', 'facebook_link', 'image_link', 'website_link', 'seeking_description'
+  try:
+      vals = request.form
+      new_venue = Venue()
+      new_venue.name = vals['name']
+      new_venue.city = vals['city']
+      new_venue.state = vals['state']
+      new_venue.address = vals['address']
+      new_venue.phone = vals['phone']
+      # # new_venue.genres = vals['genres']
+      new_venue.facebook_link = vals['facebook_link']
+      new_venue.image_link = vals['image_link']
+      print(new_venue)
+      print(dir(new_venue))
+      print(request.form)
+      db.session.add(new_venue)
+      db.session.commit()
+      flash('Venue ' + request.form['name'] + ' was successfully listed!')
+  except:
+      flash('An error occurred. Venue ' + request.form['name'] + ' could not be listed.')
+      db.session.rollback()
+  # finally:
+  #     db.session.close()
   # TODO: on unsuccessful db insert, flash an error instead.
   # e.g., flash('An error occurred. Venue ' + data.name + ' could not be listed.')
   # see: http://flask.pocoo.org/docs/1.0/patterns/flashing/
