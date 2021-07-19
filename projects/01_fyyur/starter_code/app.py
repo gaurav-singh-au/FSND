@@ -12,6 +12,8 @@ import logging
 from logging import Formatter, FileHandler
 from flask_wtf import Form
 from forms import *
+from flask_migrate import Migrate
+
 #----------------------------------------------------------------------------#
 # App Config.
 #----------------------------------------------------------------------------#
@@ -23,7 +25,7 @@ app.config['SQLALCHEMY_DATABASE_URI'] = 'postgresql://gen_user:gen_user@localhos
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 db = SQLAlchemy(app)
 # TODO: connect to a local postgresql database
-
+migrate = Migrate(app,db)
 #----------------------------------------------------------------------------#
 # Models.
 #----------------------------------------------------------------------------#
@@ -39,7 +41,10 @@ class Venue(db.Model):
     phone = db.Column(db.String(120))
     image_link = db.Column(db.String(500))
     facebook_link = db.Column(db.String(120))
-# 'genres', 'website_link', 'seeking_description'
+    genres = db.Column(db.String(500))
+    website_link = db.Column(db.String(120))
+    seeking_description = db.Column(db.String(500))
+    seeking_talent = db.Column(db.Boolean)
     
     # TODO: implement any missing fields, as a database migration using Flask-Migrate
     def __repr__(self):
@@ -230,7 +235,9 @@ def show_venue(venue_id):
   this_venue = Venue.query.get(venue_id)
   data_d = {"id":this_venue.id, "name":this_venue.name, 
             "address": this_venue.address, "city":this_venue.city, "state":this_venue.state,
-            "facebook_link": this_venue.facebook_link, "image_link": this_venue.image_link}
+            "facebook_link": this_venue.facebook_link, "image_link": this_venue.image_link,
+            "genres": [] if this_venue.genres==None else this_venue.genres.split(";"), "seeking_talent": this_venue.seeking_talent,
+            "website": this_venue.website_link, "phone": this_venue.phone}
   return render_template('pages/show_venue.html', venue=data_d)
 
 #  Create Venue
@@ -247,7 +254,7 @@ def create_venue_submission():
   # TODO: modify data to be the data object returned from db insertion
 
   # on successful db insert, flash success
-  print(request.form.keys())
+  # print(request.form.keys())
   # 'name', 'city', 'state', 'address', 'phone', 'genres', 'facebook_link', 'image_link', 'website_link', 'seeking_description'
   try:
       vals = request.form
@@ -257,12 +264,16 @@ def create_venue_submission():
       new_venue.state = vals['state']
       new_venue.address = vals['address']
       new_venue.phone = vals['phone']
-      # # new_venue.genres = vals['genres']
+      # print(dir(vals),vals['genres'],type(vals['genres']), vals.getlist('genres'))
+      new_venue.genres = ";".join(vals.getlist('genres'))
       new_venue.facebook_link = vals['facebook_link']
       new_venue.image_link = vals['image_link']
-      print(new_venue)
-      print(dir(new_venue))
-      print(request.form)
+      new_venue.website_link = vals['website_link']
+      new_venue.seeking_talent = True if 'seeking_talent' in vals else False
+      new_venue.seeking_description = vals['seeking_description']
+      # print(new_venue)
+      # print(dir(new_venue))
+      # print(request.form)
       db.session.add(new_venue)
       db.session.commit()
       flash('Venue ' + request.form['name'] + ' was successfully listed!')
@@ -425,28 +436,46 @@ def edit_artist_submission(artist_id):
 
 @app.route('/venues/<int:venue_id>/edit', methods=['GET'])
 def edit_venue(venue_id):
-  form = VenueForm()
+  this_venue = Venue.query.get(venue_id)
   venue={
-    "id": 1,
-    "name": "The Musical Hop",
-    "genres": ["Jazz", "Reggae", "Swing", "Classical", "Folk"],
-    "address": "1015 Folsom Street",
-    "city": "San Francisco",
-    "state": "CA",
-    "phone": "123-123-1234",
-    "website": "https://www.themusicalhop.com",
-    "facebook_link": "https://www.facebook.com/TheMusicalHop",
-    "seeking_talent": True,
-    "seeking_description": "We are on the lookout for a local artist to play every two weeks. Please call us.",
-    "image_link": "https://images.unsplash.com/photo-1543900694-133f37abaaa5?ixlib=rb-1.2.1&ixid=eyJhcHBfaWQiOjEyMDd9&auto=format&fit=crop&w=400&q=60"
+    "id": this_venue.id,
+    "name": this_venue.name,
+    "genres": [] if this_venue.genres== None else this_venue.genres.split(";"),
+    "address": this_venue.address,
+    "city": this_venue.city,
+    "state": this_venue.state,
+    "phone": this_venue.phone,
+    "website": this_venue.website_link,
+    "facebook_link": this_venue.facebook_link,
+    "seeking_talent": this_venue.seeking_talent,
+    "seeking_description": this_venue.seeking_description,
+    "image_link": this_venue.image_link
   }
   # TODO: populate form with values from venue with ID <venue_id>
-  return render_template('forms/edit_venue.html', form=form, venue=venue)
+  form = VenueForm(data=venue)
+  # form.populate_obj(obj=this_venue)
+  print(dir(form))
+  print(form.validate())
+  return render_template('forms/edit_venue.html', form=form, venue=this_venue)
 
 @app.route('/venues/<int:venue_id>/edit', methods=['POST'])
 def edit_venue_submission(venue_id):
   # TODO: take values from the form submitted, and update existing
   # venue record with ID <venue_id> using the new attributes
+  this_venue = Venue.query.get(venue_id)
+  form = VenueForm()
+  this_venue.name = form.name.data
+  this_venue.address = form.address.data
+  this_venue.city = form.city.data
+  this_venue.state = form.state.data
+  this_venue.phone = form.phone.data
+  this_venue.facebook_link = form.facebook_link.data
+  this_venue.image_link = form.image_link.data
+  this_venue.seeking_talent = form.seeking_talent.data
+  this_venue.genres = ";".join(form.genres.data)
+  this_venue.seeking_description = form.seeking_description.data
+  this_venue.website_link = form.website_link.data
+  db.session.commit()
   return redirect(url_for('show_venue', venue_id=venue_id))
 
 #  Create Artist
