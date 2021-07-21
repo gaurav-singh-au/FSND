@@ -12,6 +12,11 @@
 					<h5>{{ venue.name }}</h5>
 				</div>
 			</a>
+			<a href="/venues/{{ venue.id }}/delete">
+                <div> 
+                <button type="button" class="deletebtn">Delete</button>
+                </div>
+            </a>					
 		</li>
 		{% endfor %}
 	</ul>
