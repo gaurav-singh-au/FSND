@@ -1,10 +1,11 @@
 import os
 from sqlalchemy import Column, String, Integer, create_engine
+# from sqlalchemy.orm import relationship,backref
 from flask_sqlalchemy import SQLAlchemy
 import json
 
 database_name = "trivia"
-database_path = "postgres://{}/{}".format('localhost:5432', database_name)
+database_path = "postgresql://{}:{}@{}/{}".format('gen_user','gen_user','localhost:5432', database_name)
 
 db = SQLAlchemy()
 
@@ -20,6 +21,13 @@ def setup_db(app, database_path=database_path):
     db.create_all()
 
 '''
+find questions
+'''
+def find_questions(term):
+    res = db.session.query(Question).where(Question.question.ilike(term)).all()
+    return res
+
+'''
 Question
 
 '''
@@ -31,6 +39,7 @@ class Question(db.Model):
   answer = Column(String)
   category = Column(String)
   difficulty = Column(Integer)
+   # artist_id = db.Column(db.Integer, db.ForeignKey('Artist.id'), nullable=False)
 
   def __init__(self, question, answer, category, difficulty):
     self.question = question
@@ -67,9 +76,11 @@ class Category(db.Model):
 
   id = Column(Integer, primary_key=True)
   type = Column(String)
-
+  # questions = relationship("Question")
+  
   def __init__(self, type):
     self.type = type
+    # self.questions = relationship("Question")
 
   def format(self):
     return {
