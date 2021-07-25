@@ -103,7 +103,7 @@ def create_app(test_config=None):
     This removal will persist in the database and when you refresh the page.
     '''
     @app.route('/questions/<int:question_id>/delete',
-               methods=['GET', 'DELETE'])
+               methods=['DELETE'])
     def deleteQuestion(question_id):
         try:
             ques = Question.query.filter(Question.id == question_id).all()[0]
@@ -127,7 +127,7 @@ def create_app(test_config=None):
     the end of the last page
     of the questions list in the "List" tab.
     '''
-    @app.route('/questions/add', methods=['POST'])
+    @app.route('/add', methods=['POST'])
     def submitQuestions():
         sterm = request.data.decode("utf-8")
         data = json.loads(request.data.decode("utf-8"))
