@@ -12,7 +12,7 @@ QUESTIONS_PER_PAGE = 10
 
 def paginate_questions(request, selection):
     page = request.args.get('page', 1, type=int)
-    print("page number is : ", page)
+    # print("page number is : ", page)
     start = (page - 1) * QUESTIONS_PER_PAGE
     end = start + QUESTIONS_PER_PAGE
 
@@ -79,7 +79,7 @@ def create_app(test_config=None):
         selection = Question.query.all()
         # print(len(selection))
         current_questions = paginate_questions(request, selection)
-        print(request.args)
+        # print(request.args)
         if len(current_questions) == 0:
             abort(404)
 
@@ -107,7 +107,7 @@ def create_app(test_config=None):
     def deleteQuestion(question_id):
         try:
             ques = Question.query.filter(Question.id == question_id).all()[0]
-            print(ques.format())
+            # print(ques.format())
             ques.delete()
             return jsonify({
                 'success': True,

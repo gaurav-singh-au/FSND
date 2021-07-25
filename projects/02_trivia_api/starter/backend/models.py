@@ -5,7 +5,10 @@ from flask_sqlalchemy import SQLAlchemy
 import json
 
 database_name = "trivia"
-database_path = "postgresql://{}:{}@{}/{}".format('gen_user','gen_user','localhost:5432', database_name)
+database_path = "postgresql://{}:{}@{}/{}".format('gen_user',
+                                                  'gen_user',
+                                                  'localhost:5432',
+                                                  database_name)
 
 db = SQLAlchemy()
 
@@ -13,6 +16,8 @@ db = SQLAlchemy()
 setup_db(app)
     binds a flask application and a SQLAlchemy service
 '''
+
+
 def setup_db(app, database_path=database_path):
     app.config["SQLALCHEMY_DATABASE_URI"] = database_path
     app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
@@ -23,6 +28,8 @@ def setup_db(app, database_path=database_path):
 '''
 find questions
 '''
+
+
 def find_questions(term):
     res = db.session.query(Question).where(Question.question.ilike(term)).all()
     return res
@@ -31,59 +38,61 @@ def find_questions(term):
 Question
 
 '''
-class Question(db.Model):  
-  __tablename__ = 'questions'
 
-  id = Column(Integer, primary_key=True)
-  question = Column(String)
-  answer = Column(String)
-  category = Column(String)
-  difficulty = Column(Integer)
-   # artist_id = db.Column(db.Integer, db.ForeignKey('Artist.id'), nullable=False)
 
-  def __init__(self, question, answer, category, difficulty):
-    self.question = question
-    self.answer = answer
-    self.category = category
-    self.difficulty = difficulty
+class Question(db.Model):
+    __tablename__ = 'questions'
 
-  def insert(self):
-    db.session.add(self)
-    db.session.commit()
-  
-  def update(self):
-    db.session.commit()
+    id = Column(Integer, primary_key=True)
+    question = Column(String)
+    answer = Column(String)
+    category = Column(String)
+    difficulty = Column(Integer)
 
-  def delete(self):
-    db.session.delete(self)
-    db.session.commit()
+    def __init__(self, question, answer, category, difficulty):
+        self.question = question
+        self.answer = answer
+        self.category = category
+        self.difficulty = difficulty
 
-  def format(self):
-    return {
-      'id': self.id,
-      'question': self.question,
-      'answer': self.answer,
-      'category': self.category,
-      'difficulty': self.difficulty
-    }
+    def insert(self):
+        db.session.add(self)
+        db.session.commit()
+
+    def update(self):
+        db.session.commit()
+
+    def delete(self):
+        db.session.delete(self)
+        db.session.commit()
+
+    def format(self):
+        return {
+          'id': self.id,
+          'question': self.question,
+          'answer': self.answer,
+          'category': self.category,
+          'difficulty': self.difficulty
+        }
 
 '''
 Category
 
 '''
-class Category(db.Model):  
-  __tablename__ = 'categories'
 
-  id = Column(Integer, primary_key=True)
-  type = Column(String)
-  # questions = relationship("Question")
-  
-  def __init__(self, type):
-    self.type = type
-    # self.questions = relationship("Question")
 
-  def format(self):
-    return {
-      'id': self.id,
-      'type': self.type
-    }
+class Category(db.Model):
+    __tablename__ = 'categories'
+
+    id = Column(Integer, primary_key=True)
+    type = Column(String)
+
+    def __init__(self, type):
+        self.type = type
+        # self.questions = relationship("Question")
+
+    def format(self):
+        return {
+          'id': self.id,
+          'type': self.type
+        }
